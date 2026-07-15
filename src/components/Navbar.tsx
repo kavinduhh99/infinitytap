@@ -69,6 +69,13 @@ export default function Navbar() {
         {/* Desktop CTA Button */}
         <div className="hidden md:flex items-center gap-4">
           <a
+            href="/login"
+            id="nav-login-desktop"
+            className="text-sm font-medium text-zinc-400 hover:text-white transition-colors py-2 px-4 border border-white/10 rounded-full hover:bg-white/5 transition-all duration-300"
+          >
+            Workspace Login
+          </a>
+          <a
             href="#products"
             id="nav-cta-desktop"
             className="relative inline-flex items-center justify-center p-0.5 overflow-hidden text-sm font-medium rounded-full group bg-gradient-to-br from-brand-violet to-brand-pink text-white hover:text-white focus:ring-4 focus:outline-none focus:ring-purple-800"
@@ -100,7 +107,7 @@ export default function Navbar() {
             transition={{ duration: 0.3 }}
             className="md:hidden border-b border-white/5 bg-[#030303]/95 backdrop-blur-lg overflow-hidden"
           >
-            <div className="px-6 py-6 flex flex-col gap-4">
+            <div className="px-6 py-6 flex flex-col gap-3">
               {navLinks.map((link) => (
                 <a
                   key={link.name}
@@ -113,10 +120,18 @@ export default function Navbar() {
                 </a>
               ))}
               <a
+                href="/login"
+                onClick={() => setIsOpen(false)}
+                id="nav-login-mobile"
+                className="mt-4 w-full flex items-center justify-center gap-2 py-3 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 text-white font-semibold text-sm transition-all duration-300"
+              >
+                Workspace Login
+              </a>
+              <a
                 href="#products"
                 onClick={() => setIsOpen(false)}
                 id="nav-cta-mobile"
-                className="mt-4 w-full flex items-center justify-center gap-2 py-3 rounded-full bg-gradient-to-r from-brand-violet to-brand-pink text-white font-semibold text-sm hover:shadow-lg hover:shadow-brand-violet/20 transition-all duration-300"
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-full bg-gradient-to-r from-brand-violet to-brand-pink text-white font-semibold text-sm hover:shadow-lg hover:shadow-brand-violet/20 transition-all duration-300"
               >
                 <CreditCard className="w-4 h-4" />
                 Order Your Card

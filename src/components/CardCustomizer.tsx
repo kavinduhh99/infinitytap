@@ -65,6 +65,10 @@ export default function CardCustomizer() {
   const [name, setName] = useState("ALEXANDER PIERCE");
   const [logo, setLogo] = useState<string | null>(null);
   const [selectedPreset, setSelectedPreset] = useState<ColorPreset>(PRESETS[0]);
+  const [cardSide, setCardSide] = useState<"front" | "back">("front");
+  const [logoScale, setLogoScale] = useState<number>(1.0);
+  const [logoPosition, setLogoPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const dragStartPos = useRef({ x: 0, y: 0 });
   
   // Checkout Form states
   const [paymentMethod, setPaymentMethod] = useState<"card" | "bank">("card");
@@ -95,6 +99,8 @@ export default function CardCustomizer() {
     e.stopPropagation();
     if (logo) URL.revokeObjectURL(logo);
     setLogo(null);
+    setLogoScale(1.0);
+    setLogoPosition({ x: 0, y: 0 });
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -205,11 +211,49 @@ export default function CardCustomizer() {
               
               {/* LEFT COLUMN: Live Preview */}
               <div className="flex flex-col items-center justify-center lg:sticky lg:top-28">
-                <span className="text-xs text-zinc-500 font-bold uppercase tracking-wider mb-6 block text-center">Live Preview (Card Front)</span>
+                <span className="text-xs text-zinc-500 font-bold uppercase tracking-wider mb-3 block text-center">
+                  Live Preview (Card {cardSide === "front" ? "Front" : "Back"})
+                </span>
+
+                {/* Card Side Toggle Button */}
+                <div className="flex p-1 rounded-full bg-zinc-950 border border-white/5 relative mb-6 w-fit mx-auto">
+                  <button
+                    type="button"
+                    onClick={() => setCardSide("front")}
+                    className={`relative z-10 px-4 py-1.5 text-xs font-bold rounded-full transition-all duration-300 cursor-pointer ${
+                      cardSide === "front" ? "text-[#030303]" : "text-zinc-500 hover:text-zinc-300"
+                    }`}
+                  >
+                    {cardSide === "front" && (
+                      <motion.div 
+                        layoutId="active-side-indicator"
+                        className="absolute inset-0 rounded-full bg-white z-[-1]"
+                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                      />
+                    )}
+                    Front View
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCardSide("back")}
+                    className={`relative z-10 px-4 py-1.5 text-xs font-bold rounded-full transition-all duration-300 cursor-pointer ${
+                      cardSide === "back" ? "text-[#030303]" : "text-zinc-500 hover:text-zinc-300"
+                    }`}
+                  >
+                    {cardSide === "back" && (
+                      <motion.div 
+                        layoutId="active-side-indicator"
+                        className="absolute inset-0 rounded-full bg-white z-[-1]"
+                        transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                      />
+                    )}
+                    Back View
+                  </button>
+                </div>
                 
                 {/* 3D Landscape Card Wrapper */}
                 <div 
-                  className={`w-full max-w-[380px] aspect-[1.585] rounded-[20px] p-6 flex flex-col justify-between border relative shadow-2xl transition-all duration-500 ${selectedPreset.gradientClass}`}
+                  className={`w-full max-w-[380px] aspect-[1.585] rounded-[20px] p-6 flex flex-col justify-between border relative shadow-2xl transition-all duration-500 overflow-hidden ${selectedPreset.gradientClass}`}
                   style={{
                     boxShadow: `0 35px 80px -15px ${selectedPreset.glowColor}, 0 0 0 1px rgba(255,255,255,0.05)`,
                   }}
@@ -217,53 +261,143 @@ export default function CardCustomizer() {
                   {/* Subtle glass reflection overlay */}
                   <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/[0.03] to-white/[0.08] rounded-[20px] pointer-events-none" />
                   
-                  {/* Top Row: NFC Chip Mockup & Brand Logo */}
-                  <div className="flex justify-between items-start z-10">
-                    {/* Metal Chip Plate */}
-                    <div className={`w-11 h-9 rounded-md border border-white/10 relative overflow-hidden flex flex-col justify-between p-1.5 shadow-md ${selectedPreset.chipColor}`}>
-                      <div className="w-full h-px bg-white/20" />
-                      <div className="w-full h-px bg-white/20" />
-                      <div className="w-full h-px bg-white/20" />
-                      {/* Vertical metal pins */}
-                      <div className="absolute inset-y-0 left-1/3 w-px bg-white/20" />
-                      <div className="absolute inset-y-0 right-1/3 w-px bg-white/20" />
-                    </div>
+                  <AnimatePresence mode="wait">
+                    {cardSide === "front" ? (
+                      <motion.div
+                        key="card-front"
+                        initial={{ opacity: 0, rotateY: 90 }}
+                        animate={{ opacity: 1, rotateY: 0 }}
+                        exit={{ opacity: 0, rotateY: -90 }}
+                        transition={{ duration: 0.3 }}
+                        className="absolute inset-0 p-6 flex flex-col justify-between z-10"
+                      >
+                        {/* Top Row: NFC Chip Mockup & Brand Logo */}
+                        <div className="flex justify-between items-start z-10">
+                          {/* Metal Chip Plate */}
+                          <div className={`w-11 h-9 rounded-md border border-white/10 relative overflow-hidden flex flex-col justify-between p-1.5 shadow-md ${selectedPreset.chipColor}`}>
+                            <div className="w-full h-px bg-white/20" />
+                            <div className="w-full h-px bg-white/20" />
+                            <div className="w-full h-px bg-white/20" />
+                            {/* Vertical metal pins */}
+                            <div className="absolute inset-y-0 left-1/3 w-px bg-white/20" />
+                            <div className="absolute inset-y-0 right-1/3 w-px bg-white/20" />
+                          </div>
 
-                    {/* Logo Overlay */}
-                    {logo ? (
-                      <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-white/5 flex items-center justify-center p-1 border border-white/10 shadow-sm animate-fade-in">
-                        <img src={logo} alt="Custom Logo Preview" className="object-contain w-full h-full max-h-full" />
-                      </div>
+                          {/* Logo Overlay Canvas */}
+                          {logo ? (
+                            <motion.div
+                              drag
+                              dragConstraints={{ left: -60, right: 60, top: -40, bottom: 40 }}
+                              dragElastic={0.1}
+                              dragMomentum={false}
+                              onDragStart={() => {
+                                dragStartPos.current = { x: logoPosition.x, y: logoPosition.y };
+                              }}
+                              onDrag={(event, info) => {
+                                setLogoPosition({
+                                  x: Math.min(Math.max(Math.round(dragStartPos.current.x + info.offset.x), -60), 60),
+                                  y: Math.min(Math.max(Math.round(dragStartPos.current.y + info.offset.y), -40), 40),
+                                });
+                              }}
+                              className="relative w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center p-1 border border-white/10 shadow-sm animate-fade-in cursor-grab active:cursor-grabbing z-20"
+                              style={{
+                                transform: 'scale(' + logoScale + ') translate(' + logoPosition.x + 'px, ' + logoPosition.y + 'px)',
+                                transformOrigin: 'center center'
+                              }}
+                            >
+                              <img src={logo} alt="Custom Logo Preview" className="object-contain w-full h-full max-h-full pointer-events-none" />
+                            </motion.div>
+                          ) : (
+                            <div className="w-10 h-10 border border-dashed border-white/20 rounded-lg flex items-center justify-center text-white/20 text-xs">
+                              <ImageIcon className="w-5 h-5 opacity-40" />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Center Accent: Dynamic wireless symbol */}
+                        <div className="flex justify-center items-center my-2 opacity-80 z-10">
+                          <svg className={`w-8 h-8 ${selectedPreset.id === 'gold' ? 'text-[#5e481c]' : 'text-white/60'} animate-pulse`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 2a10 10 0 0 1 10 10" />
+                            <path d="M12 6a6 6 0 0 1 6 6" />
+                            <path d="M12 10a2 2 0 0 1 2 2" />
+                            <circle cx="12" cy="12" r="1" />
+                          </svg>
+                        </div>
+
+                        {/* Bottom Row: Customized Cardholder Name */}
+                        <div className="flex justify-between items-end z-10 w-full">
+                          <div className="flex flex-col gap-0.5 text-left">
+                            <span className={`text-[9px] uppercase tracking-widest opacity-60 font-semibold ${selectedPreset.id === 'gold' ? 'text-[#5e481c]' : 'text-zinc-400'}`}>Cardholder</span>
+                            <h4 className={`text-sm tracking-widest font-black ${selectedPreset.textColor} truncate max-w-[220px]`}>
+                              {name ? name.toUpperCase() : "YOUR NAME HERE"}
+                            </h4>
+                          </div>
+
+                          <span className={`text-[10px] tracking-widest font-black uppercase opacity-65 ${selectedPreset.id === 'gold' ? 'text-[#5e481c]' : 'text-white'}`}>
+                            INFINITY TAP
+                          </span>
+                        </div>
+                      </motion.div>
                     ) : (
-                      <div className="w-10 h-10 border border-dashed border-white/20 rounded-lg flex items-center justify-center text-white/20 text-xs">
-                        <ImageIcon className="w-5 h-5 opacity-40" />
-                      </div>
+                      <motion.div
+                        key="card-back"
+                        initial={{ opacity: 0, rotateY: -90 }}
+                        animate={{ opacity: 1, rotateY: 0 }}
+                        exit={{ opacity: 0, rotateY: 90 }}
+                        transition={{ duration: 0.3 }}
+                        className="absolute inset-0 p-6 flex flex-col justify-between z-10"
+                      >
+                        {/* Top Row: NFC Wireless Symbol */}
+                        <div className="flex justify-between items-start w-full">
+                          <span className={`text-[10px] tracking-widest font-black uppercase opacity-65 ${selectedPreset.id === 'gold' ? 'text-[#5e481c]' : 'text-white'}`}>
+                            INFINITY TAP
+                          </span>
+                          <div className="opacity-80">
+                            <svg className={`w-6 h-6 ${selectedPreset.id === 'gold' ? 'text-[#5e481c]' : 'text-white/60'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M12 2a10 10 0 0 1 10 10" />
+                              <path d="M12 6a6 6 0 0 1 6 6" />
+                              <circle cx="12" cy="12" r="1" />
+                            </svg>
+                          </div>
+                        </div>
+
+                        {/* Center: Stylized QR Code Grid Layout */}
+                        <div className="flex-1 flex items-center justify-center my-2">
+                          <div className="p-2.5 rounded-xl bg-black/40 backdrop-blur-md border border-white/10 shadow-lg relative flex items-center justify-center group overflow-hidden">
+                            {/* Glow behind QR Code */}
+                            <div className={`absolute inset-0 opacity-10 group-hover:opacity-20 transition-opacity duration-300 blur-xl ${selectedPreset.id === 'gold' ? 'bg-yellow-500' : 'bg-brand-violet'}`} />
+                            
+                            {/* Stylized QR Code SVG */}
+                            <svg 
+                              className={`w-20 h-20 relative z-10 transition-colors duration-300 ${
+                                selectedPreset.id === 'gold' ? 'text-yellow-500' : selectedPreset.id === 'royal-blue' ? 'text-blue-400' : selectedPreset.id === 'turquoise' ? 'text-cyan-400' : 'text-white/90'
+                              }`} 
+                              viewBox="0 0 100 100" 
+                              fill="currentColor"
+                            >
+                              <path d="M0 0h28v28H0zm4 4v20h20V4zm4 4h12v12H8z" />
+                              <path d="M72 0h28v28H72zm4 4v20h20V4zm4 4h12v12H8z" />
+                              <path d="M0 72h28v28H0zm4 4v20h20V4zm4 4h12v12H8z" />
+                              <path d="M76 76h16v16H76zm4 4v8h8v-8z" />
+                              <path d="M32 8h4v4h-4zm8 0h4v4h-4zm8 0h4v4h-4zm8 0h4v4h-4zm0 8h4v4h-4zm0 8h4v4h-4z" />
+                              <path d="M8 32h4v4H8zm0 8h4v4H8zm0 8h4v4H8zm0 8h4v4H8zm8 0h4v4h-4zm8 0h4v4h-4z" />
+                              <path d="M32 32h4v4h-4zm8 0h4v4h-4zm12 0h4v4h-4zm8 0h4v4h-4zm8 0h8v4h-8zm8 8h4v4h-4zm-16 0h4v4h-4zm-8 0h4v4h-4zm-12 0h8v4h-8zm24 8h4v4h-4zm-4 0h4v4h-4zm-8 0h4v4h-4zm-12 0h4v4h-4zm-4 0h4v4h-4zm24 8h4v4h-4zm-12 0h4v4h-4zm-8 0h8v4h-8zm24 8h4v8h-4zm-8 0h4v4h-4zm-8 0h4v4h-4zm-8 0h4v4h-4zm-4 4h4v4h-4zm12 8h8v4h-8zm-8 0h4v4h-4zm12 8h4v4h-4zm8-4h4v4h-4zm4-4h4v4h-4z" />
+                            </svg>
+                          </div>
+                        </div>
+
+                        {/* Bottom Row: Minimalist Link Label */}
+                        <div className="flex justify-between items-end w-full">
+                          <span className={`text-[8px] uppercase tracking-widest opacity-60 font-semibold ${selectedPreset.id === 'gold' ? 'text-[#5e481c]' : 'text-zinc-500'}`}>
+                            Scan to Connect
+                          </span>
+                          <span className={`text-[8px] font-mono tracking-wider opacity-70 ${selectedPreset.id === 'gold' ? 'text-[#5e481c]' : 'text-zinc-400'}`}>
+                            nfc.infinitytap.com
+                          </span>
+                        </div>
+                      </motion.div>
                     )}
-                  </div>
-
-                  {/* Center Accent: Dynamic wireless symbol */}
-                  <div className="flex justify-center items-center my-2 opacity-80 z-10">
-                    <svg className={`w-8 h-8 ${selectedPreset.id === 'gold' ? 'text-[#5e481c]' : 'text-white/60'} animate-pulse`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 2a10 10 0 0 1 10 10" />
-                      <path d="M12 6a6 6 0 0 1 6 6" />
-                      <path d="M12 10a2 2 0 0 1 2 2" />
-                      <circle cx="12" cy="12" r="1" />
-                    </svg>
-                  </div>
-
-                  {/* Bottom Row: Customized Cardholder Name */}
-                  <div className="flex justify-between items-end z-10">
-                    <div className="flex flex-col gap-0.5">
-                      <span className={`text-[9px] uppercase tracking-widest opacity-60 font-semibold ${selectedPreset.id === 'gold' ? 'text-[#5e481c]' : 'text-zinc-400'}`}>Cardholder</span>
-                      <h4 className={`text-sm tracking-widest font-black ${selectedPreset.textColor} truncate max-w-[220px]`}>
-                        {name ? name.toUpperCase() : "YOUR NAME HERE"}
-                      </h4>
-                    </div>
-
-                    <span className={`text-[10px] tracking-widest font-black uppercase opacity-65 ${selectedPreset.id === 'gold' ? 'text-[#5e481c]' : 'text-white'}`}>
-                      INFINITY TAP
-                    </span>
-                  </div>
+                  </AnimatePresence>
                 </div>
 
                 <div className="mt-8 text-center bg-zinc-900/40 border border-white/5 py-3 px-6 rounded-2xl max-w-[380px] w-full">
@@ -295,7 +429,7 @@ export default function CardCustomizer() {
 
                 {/* Option 2: Custom Logo Upload */}
                 <div className="flex flex-col gap-2">
-                  <span className="text-xs text-zinc-400 font-bold uppercase tracking-wider">
+                  <span className="text-xs text-zinc-400 font-bold uppercase tracking-wider text-left">
                     2. Upload Brand Logo (Optional)
                   </span>
                   
@@ -308,20 +442,95 @@ export default function CardCustomizer() {
                   />
 
                   {logo ? (
-                    <div className="flex items-center gap-4 p-4 rounded-2xl bg-zinc-900/40 border border-white/5">
-                      <div className="relative w-12 h-12 rounded-lg bg-white/5 flex items-center justify-center p-1 border border-white/10">
-                        <img src={logo} alt="Preview thumbnail" className="object-contain w-full h-full" />
+                    <div className="flex flex-col gap-4">
+                      <div className="flex items-center gap-4 p-4 rounded-2xl bg-zinc-900/40 border border-white/5">
+                        <div className="relative w-12 h-12 rounded-lg bg-white/5 flex items-center justify-center p-1 border border-white/10">
+                          <img src={logo} alt="Preview thumbnail" className="object-contain w-full h-full" />
+                        </div>
+                        <div className="flex-1 flex flex-col text-left">
+                          <span className="text-xs font-bold text-white">Logo Uploaded</span>
+                          <span className="text-[10px] text-zinc-500">Image is ready for print engraving</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={removeLogo}
+                          className="px-3 py-1.5 rounded-lg border border-white/10 hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-500 text-[10px] text-zinc-400 font-bold transition-all cursor-pointer"
+                        >
+                          Remove
+                        </button>
                       </div>
-                      <div className="flex-1 flex flex-col">
-                        <span className="text-xs font-bold text-white">Logo Uploaded</span>
-                        <span className="text-[10px] text-zinc-500">Image is ready for print engraving</span>
+
+                      {/* Canvas Engine Controls */}
+                      <div className="flex flex-col gap-4 p-5 rounded-2xl bg-zinc-900/20 border border-white/5 animate-fade-in">
+                        <div className="flex justify-between items-center pb-2 border-b border-white/5">
+                          <span className="text-xs font-bold text-white">Logo Engine Controls</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setLogoScale(1.0);
+                              setLogoPosition({ x: 0, y: 0 });
+                            }}
+                            className="text-[10px] text-brand-cyan hover:underline font-bold cursor-pointer"
+                          >
+                            Reset Engine
+                          </button>
+                        </div>
+
+                        {/* Scale Slider */}
+                        <div className="flex flex-col gap-1.5 text-left">
+                          <div className="flex justify-between text-[10px] text-zinc-400 font-bold uppercase">
+                            <span>Scale</span>
+                            <span className="font-mono text-brand-cyan">{logoScale.toFixed(1)}x</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="0.5"
+                            max="2.5"
+                            step="0.1"
+                            value={logoScale}
+                            onChange={(e) => setLogoScale(parseFloat(e.target.value))}
+                            className="w-full h-1 bg-[#1f1f1f] rounded-lg appearance-none cursor-pointer accent-brand-violet"
+                          />
+                        </div>
+
+                        {/* Position X Slider */}
+                        <div className="flex flex-col gap-1.5 text-left">
+                          <div className="flex justify-between text-[10px] text-zinc-400 font-bold uppercase">
+                            <span>Position X</span>
+                            <span className="font-mono text-brand-cyan">{logoPosition.x}px</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="-60"
+                            max="60"
+                            step="1"
+                            value={logoPosition.x}
+                            onChange={(e) => setLogoPosition({ ...logoPosition, x: parseInt(e.target.value) })}
+                            className="w-full h-1 bg-[#1f1f1f] rounded-lg appearance-none cursor-pointer accent-brand-violet"
+                          />
+                        </div>
+
+                        {/* Position Y Slider */}
+                        <div className="flex flex-col gap-1.5 text-left">
+                          <div className="flex justify-between text-[10px] text-zinc-400 font-bold uppercase">
+                            <span>Position Y</span>
+                            <span className="font-mono text-brand-cyan">{logoPosition.y}px</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="-40"
+                            max="40"
+                            step="1"
+                            value={logoPosition.y}
+                            onChange={(e) => setLogoPosition({ ...logoPosition, y: parseInt(e.target.value) })}
+                            className="w-full h-1 bg-[#1f1f1f] rounded-lg appearance-none cursor-pointer accent-brand-violet"
+                          />
+                        </div>
+
+                        <span className="text-[9px] text-zinc-500 leading-normal block text-left">
+                          💡 Tip: You can also drag the logo directly on the card surface above to reposition it.
+                        </span>
                       </div>
-                      <button
-                        onClick={removeLogo}
-                        className="px-3 py-1.5 rounded-lg border border-white/10 hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-500 text-[10px] text-zinc-400 font-bold transition-all"
-                      >
-                        Remove
-                      </button>
                     </div>
                   ) : (
                     <div 
@@ -405,34 +614,102 @@ export default function CardCustomizer() {
                   
                   {/* Micro Card Template */}
                   <div 
-                    className={`w-[240px] aspect-[1.585] rounded-xl p-4 flex flex-col justify-between border relative shadow-xl scale-95 transition-all duration-300 ${selectedPreset.gradientClass}`}
+                    className={`w-[240px] aspect-[1.585] rounded-xl p-4 flex flex-col justify-between border relative shadow-xl scale-95 transition-all duration-300 overflow-hidden ${selectedPreset.gradientClass}`}
                   >
-                    <div className="flex justify-between items-start">
-                      {/* Mini Chip */}
-                      <div className={`w-8 h-6 rounded border border-white/10 relative p-1 ${selectedPreset.chipColor}`} />
-                      {/* Mini Logo */}
-                      {logo ? (
-                        <div className="relative w-6 h-6 rounded bg-white/5 flex items-center justify-center p-0.5">
-                          <img src={logo} alt="Mini Logo" className="object-contain w-full h-full" />
-                        </div>
-                      ) : (
-                        <div className="w-6 h-6 border border-dashed border-white/20 rounded flex items-center justify-center text-white/20 text-[6px]">
-                          TAP
-                        </div>
-                      )}
-                    </div>
+                    <AnimatePresence mode="wait">
+                      {cardSide === "front" ? (
+                        <motion.div
+                          key="mini-front"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="w-full h-full flex flex-col justify-between absolute inset-0 p-4"
+                        >
+                          <div className="flex justify-between items-start w-full">
+                            {/* Mini Chip */}
+                            <div className={`w-8 h-6 rounded border border-white/10 relative p-1 ${selectedPreset.chipColor}`} />
+                            {/* Mini Logo */}
+                            {logo ? (
+                              <div 
+                                className="relative w-6 h-6 rounded bg-white/5 flex items-center justify-center p-0.5 border border-white/10"
+                                style={{
+                                  transform: `scale(${logoScale}) translate(${logoPosition.x * (240 / 380)}px, ${logoPosition.y * (240 / 380)}px)`,
+                                  transformOrigin: 'center center'
+                                }}
+                              >
+                                <img src={logo} alt="Mini Logo" className="object-contain w-full h-full" />
+                              </div>
+                            ) : (
+                              <div className="w-6 h-6 border border-dashed border-white/20 rounded flex items-center justify-center text-white/20 text-[6px]">
+                                <ImageIcon className="w-3 h-3 opacity-30" />
+                              </div>
+                            )}
+                          </div>
 
-                    <div className="flex justify-between items-end">
-                      <div className="flex flex-col gap-0.5">
-                        <span className={`text-[6px] uppercase tracking-widest opacity-50 ${selectedPreset.id === 'gold' ? 'text-[#5e481c]' : 'text-zinc-400'}`}>Cardholder</span>
-                        <h4 className={`text-[9px] tracking-wider font-black ${selectedPreset.textColor} truncate max-w-[130px]`}>
-                          {name ? name.toUpperCase() : "YOUR NAME HERE"}
-                        </h4>
-                      </div>
-                      <span className={`text-[7px] tracking-widest font-black uppercase opacity-60 ${selectedPreset.id === 'gold' ? 'text-[#5e481c]' : 'text-white'}`}>
-                        INFINITY TAP
-                      </span>
-                    </div>
+                          <div className="flex justify-between items-end w-full">
+                            <div className="flex flex-col gap-0.5 text-left">
+                              <span className={`text-[6px] uppercase tracking-widest opacity-50 ${selectedPreset.id === 'gold' ? 'text-[#5e481c]' : 'text-zinc-400'}`}>Cardholder</span>
+                              <h4 className={`text-[9px] tracking-wider font-black ${selectedPreset.textColor} truncate max-w-[130px]`}>
+                                {name ? name.toUpperCase() : "YOUR NAME HERE"}
+                              </h4>
+                            </div>
+                            <span className={`text-[7px] tracking-widest font-black uppercase opacity-60 ${selectedPreset.id === 'gold' ? 'text-[#5e481c]' : 'text-white'}`}>
+                              INFINITY TAP
+                            </span>
+                          </div>
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          key="mini-back"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="w-full h-full flex flex-col justify-between absolute inset-0 p-4"
+                        >
+                          <div className="flex justify-between items-start w-full">
+                            <span className={`text-[6px] tracking-widest font-black uppercase opacity-60 ${selectedPreset.id === 'gold' ? 'text-[#5e481c]' : 'text-white'}`}>
+                              INFINITY TAP
+                            </span>
+                            <div className="opacity-80">
+                              <svg className={`w-4 h-4 ${selectedPreset.id === 'gold' ? 'text-[#5e481c]' : 'text-white/60'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M12 2a10 10 0 0 1 10 10" />
+                                <path d="M12 6a6 6 0 0 1 6 6" />
+                                <circle cx="12" cy="12" r="1" />
+                              </svg>
+                            </div>
+                          </div>
+
+                          <div className="flex-1 flex items-center justify-center my-1">
+                            <div className="p-1 rounded bg-black/40 border border-white/10 flex items-center justify-center relative">
+                              <svg 
+                                className={`w-10 h-10 transition-colors duration-300 ${
+                                  selectedPreset.id === 'gold' ? 'text-yellow-500' : selectedPreset.id === 'royal-blue' ? 'text-blue-400' : selectedPreset.id === 'turquoise' ? 'text-cyan-400' : 'text-white/90'
+                                }`} 
+                                viewBox="0 0 100 100" 
+                                fill="currentColor"
+                              >
+                                <path d="M0 0h28v28H0zm4 4v20h20V4zm4 4h12v12H8z" />
+                                <path d="M72 0h28v28H72zm4 4v20h20V4zm4 4h12v12H8z" />
+                                <path d="M0 72h28v28H0zm4 4v20h20V4zm4 4h12v12H8z" />
+                                <path d="M76 76h16v16H76zm4 4v8h8v-8z" />
+                                <path d="M32 8h4v4h-4zm8 0h4v4h-4zm8 0h4v4h-4zm8 0h4v4h-4zm0 8h4v4h-4zm0 8h4v4h-4z" />
+                                <path d="M8 32h4v4H8zm0 8h4v4H8zm0 8h4v4H8zm0 8h4v4H8zm8 0h4v4h-4zm8 0h4v4h-4z" />
+                                <path d="M32 32h4v4h-4zm8 0h4v4h-4zm12 0h4v4h-4zm8 0h4v4h-4zm8 0h8v4h-8zm8 8h4v4h-4zm-16 0h4v4h-4zm-8 0h4v4h-4zm-12 0h8v4h-8zm24 8h4v4h-4zm-4 0h4v4h-4zm-8 0h4v4h-4zm-12 0h4v4h-4zm-4 0h4v4h-4zm24 8h4v4h-4zm-12 0h4v4h-4zm-8 0h8v4h-8zm24 8h4v8h-4zm-8 0h4v4h-4zm-8 0h4v4h-4zm-8 0h4v4h-4zm-4 4h4v4h-4zm12 8h8v4h-8zm-8 0h4v4h-4zm12 8h4v4h-4zm8-4h4v4h-4zm4-4h4v4h-4z" />
+                              </svg>
+                            </div>
+                          </div>
+
+                          <div className="flex justify-between items-end w-full">
+                            <span className={`text-[5px] uppercase tracking-widest opacity-60 font-semibold ${selectedPreset.id === 'gold' ? 'text-[#5e481c]' : 'text-zinc-500'}`}>
+                              Scan to Connect
+                            </span>
+                            <span className={`text-[5px] font-mono tracking-wider opacity-70 ${selectedPreset.id === 'gold' ? 'text-[#5e481c]' : 'text-zinc-400'}`}>
+                              nfc.infinitytap.com
+                            </span>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
 
                   <h3 className="text-white font-bold text-sm mt-6">Customized NFC Smart Card</h3>
@@ -752,6 +1029,9 @@ export default function CardCustomizer() {
                   setName("ALEXANDER PIERCE");
                   setLogo(null);
                   setSelectedPreset(PRESETS[0]);
+                  setCardSide("front");
+                  setLogoScale(1.0);
+                  setLogoPosition({ x: 0, y: 0 });
                   setCardNumber("");
                   setCardExpiry("");
                   setCardCvc("");
